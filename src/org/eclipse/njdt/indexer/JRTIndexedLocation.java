@@ -73,8 +73,8 @@ public class JRTIndexedLocation implements IndexedLocation {
 	}
 
 	@Override
-	public void index(IndexWriter indexWriter, MonikerFactory monikerFactory) {
-		ClassFileIndexer classFileIndexer = new ClassFileIndexer(indexWriter, monikerFactory);
+	public void index(IndexWriter indexWriter) {
+		ClassFileIndexer classFileIndexer = new ClassFileIndexer(indexWriter);
 		try {
 			Files.walkFileTree(fs.getPath("modules"), new SimpleFileVisitor<Path>() {
 

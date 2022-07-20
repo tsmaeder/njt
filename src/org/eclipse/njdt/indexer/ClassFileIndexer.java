@@ -2,10 +2,13 @@ package org.eclipse.njdt.indexer;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.BiFunction;
 
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
+import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
+import org.eclipse.njdt.indexer.writer.IndexWriterDocumentSession;
 import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
 import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
 import org.objectweb.asm.ClassReader;
@@ -15,31 +18,28 @@ import org.objectweb.asm.tree.MethodNode;
 
 public class ClassFileIndexer {
 	private IndexWriter indexWriter;
-	private MonikerFactory monikerFactory;
 	private char[] buffer=  new char[1 << 16];
 
-	public ClassFileIndexer(IndexWriter indexWriter, MonikerFactory monikerFactory) {
+	public ClassFileIndexer(IndexWriter indexWriter) {
 		this.indexWriter = indexWriter;
-		this.monikerFactory = monikerFactory;
 	}
 
 	boolean indexClassFile(DocumentAddress address, InputStream bytes) {
-		Object session = indexWriter.beginIndexing(address);
+		IndexWriterDocumentSession session = indexWriter.beginIndexing(address);
 		try {
 
 			ClassReader parser = new ClassReader(bytes);
 			ClassNode clazz = new ClassNode();
 			parser.accept(clazz, ClassReader.SKIP_CODE);
 			CharSequence sourceName = sourceName(clazz.name);
-			indexWriter.addTypeDeclaration(session, clazz.access, sourceName, null);
+			session.addTypeDeclaration(clazz.access, sourceName, null);
 			for (MethodNode method : clazz.methods) {
-				indexWriter.addMethodDeclaration(session, sourceName, method.access, method.name, method.signature,
+				session.addMethodDeclaration(method.access, sourceName, method.name, method.desc,
 						null);
 			}
 
 			for (FieldNode field : clazz.fields) {
-				indexWriter.addFieldDeclaration(session, sourceName, field.access, field.name,
-						monikerFactory.createTypeMoniker(address, sourceName));
+				session.addFieldDeclaration(field.access, sourceName, field.name, sourceName, null);
 			}
 			indexConstantPoolReferences(session, address, parser);
 
@@ -47,11 +47,11 @@ public class ClassFileIndexer {
 		} catch (IOException e) {
 			return false;
 		} finally {
-			indexWriter.doneIndexing(session);
+			session.done();
 		}
 	}
 
-	private void indexConstantPoolReferences(Object session, DocumentAddress address, ClassReader reader) {
+	private void indexConstantPoolReferences(IndexWriterDocumentSession session, DocumentAddress address, ClassReader reader) {
 		for (int i = 1; i < reader.getItemCount(); i++) {
 			int offset = reader.getItem(i);
 			if (offset > 0) {
@@ -61,11 +61,11 @@ public class ClassFileIndexer {
 				case ClassFileConstants.FieldRefTag: {
 					// add reference to the class/interface and field name and type
 					FieldRef ref = readFieldReferenceAt(reader, i);
-					indexWriter.addFieldReference(session, false, false,
-							monikerFactory.createTypeMoniker(address, sourceName(ref.containingType())),
-							ref.nameAndType().name(), null);
-					indexWriter.addTypeReference(session, TypeReferenceKind.FieldType,
-							sourceName(ref.nameAndType().type()), null);
+					session.addFieldReference(FieldReferenceKind.NONE,
+							sourceName(ref.containingType()),
+							false, ref.nameAndType().name(), null);
+					session.addTypeReference(TypeReferenceKind.FieldType,
+							sourceName(decodeBaseDescriptor(ref.nameAndType().type())), false, null);
 					break;
 				}
 				case ClassFileConstants.MethodRefTag:
@@ -79,8 +79,8 @@ public class ClassFileIndexer {
 							name = typeName(sourceName(ref.containingType()));
 						}
 						// add a method reference
-						indexWriter.addMethodReference(session, MethodReferenceKind.QualifiedReference,
-								monikerFactory.createTypeMoniker(address, sourceName(ref.containingType())), name,
+						session.addMethodReference(MethodReferenceKind.QualifiedReference,
+								sourceName(ref.containingType()), false, name,
 								ref.nameAndType().type(), null);
 					}
 					break;
@@ -90,7 +90,7 @@ public class ClassFileIndexer {
 					CharSequence name = sourceName(readClassNameAt(reader, i));
 					if (name.length() > 0 && name.charAt(0) == '[')
 						break; // skip over array references
-					indexWriter.addTypeReference(session, TypeReferenceKind.Unknown, name, null);
+					session.addTypeReference(TypeReferenceKind.Unknown, name, false, null);
 
 					break;
 				}
@@ -116,7 +116,7 @@ public class ClassFileIndexer {
 		return readUtf8At(reader, cpOffset);
 	}
 
-	private CharSequence readUtf8At(ClassReader reader, int cpOffset) {
+	private String readUtf8At(ClassReader reader, int cpOffset) {
 		return reader.readUTF8(cpOffset, buffer);
 	}
 
@@ -127,6 +127,60 @@ public class ClassFileIndexer {
 		return new NameAndType(name, descriptor);
 	}
 
+	private CharSequence decodeBaseDescriptor(CharSequence descriptor) {
+		return decodeTypeDescriptor(descriptor, (CharSequence signature, Integer arrayDimensions) -> {
+			return signature;
+		});
+	}
+
+//	private CharSequence decodeTypeDescriptor(CharSequence descriptor) {
+//		return decodeTypeDescriptor(descriptor, (CharSequence signature, Integer arrayDimensions) -> {
+//			StringBuilder buf = new StringBuilder(signature);
+//			for (int i = 0; i < arrayDimensions; i++) {
+//				buf.append("[]");
+//			}
+//			return buf;
+//		});
+//	}
+
+	private CharSequence decodeTypeDescriptor(CharSequence signature,
+			BiFunction<CharSequence, Integer, CharSequence> arrayTypeOf) {
+		if (signature == null)
+			return null;
+		int arrayDim = 0;
+		int i = 0;
+		while (i < signature.length() && signature.charAt(i) == '[') {
+			arrayDim++;
+			i++;
+		}
+		switch (signature.charAt(i)) {
+		case 'B':
+			return arrayTypeOf.apply("byte", arrayDim);
+		case 'C':
+			return arrayTypeOf.apply("char", arrayDim);
+
+		case 'D':
+			return arrayTypeOf.apply("double", arrayDim);
+
+		case 'F':
+			return arrayTypeOf.apply("float", arrayDim);
+		case 'I':
+			return arrayTypeOf.apply("integer", arrayDim);
+		case 'J':
+			return arrayTypeOf.apply("long", arrayDim);
+		case 'L':
+			return arrayTypeOf.apply(signature.subSequence(i + 1, signature.length() - 1), arrayDim);
+		case 'S':
+			return arrayTypeOf.apply("short", arrayDim);
+		case 'Z':
+			return arrayTypeOf.apply("boolean", arrayDim);
+		case 'V':
+			return arrayTypeOf.apply("void", arrayDim);
+		default:
+			throw new RuntimeException("Unexpected type tag: "+signature.charAt(i));
+		}
+	}
+	
 	private MethodRef readMethodReferenceAt(ClassReader reader, int cpIndex) {
 		int cpOffset = reader.getItem(cpIndex);
 		CharSequence clazz = readClassNameAt(reader, reader.readUnsignedShort(cpOffset));

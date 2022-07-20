@@ -14,6 +14,10 @@ public class DefaultMonikerFactory implements MonikerFactory {
 	
 	@Override
 	public CharSequence createTypeMoniker(DocumentAddress referenceFrom, CharSequence typeName) {
+		if (typeName.toString().indexOf('/') == -1) {
+			// a simple name, hence a primitive type
+			return typeName;
+		}
 		for (IndexedLocation indexedLocation : indexedLocations) {
 			CharSequence localId=  indexedLocation.lookupTypeId(typeName);
 			if (localId != null) {
