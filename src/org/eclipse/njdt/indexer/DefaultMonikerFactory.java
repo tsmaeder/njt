@@ -23,7 +23,7 @@ public class DefaultMonikerFactory implements MonikerFactory {
 			if (localId != null) {
 				String indexId = indexedLocation.getIndexUri();
 				if (indexId.equals(referenceFrom.indexId())) {
-					return "local/"+localId;
+					return "local:/"+localId;
 				}
 				return indexId  + "/" + localId;
 			}

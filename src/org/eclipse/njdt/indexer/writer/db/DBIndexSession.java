@@ -9,6 +9,7 @@ import org.eclipse.njdt.indexer.MonikerFactory;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
 import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriterDocumentSession;
+import org.eclipse.njdt.indexer.writer.IntValue;
 import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
 import org.eclipse.njdt.indexer.writer.Range;
 import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
@@ -31,8 +32,8 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 				.prepareStatement("insert into declarations(index_id, document_id, modifiers, type_name, name, signature, source_start, source_length) "
 						+ "values(?, ?, ?, ?, ?, ?, ?, ?)");
 		
-		this.insertReferenceStatement = connection.prepareStatement("insert into refs (index_id, document_id, type_moniker, on_demand, name, signature, source_start, source_end) "
-				+ "values (?, ?, ?, ?, ?, ?, ?, ?)");
+		this.insertReferenceStatement = connection.prepareStatement("insert into refs (index_id, document_id, reference_kind, type_moniker, on_demand, name, signature, source_start, source_end) "
+				+ "values (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 	}
 
 	@Override
@@ -112,16 +113,17 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 			insertReferenceStatement.clearParameters();
 			insertReferenceStatement.setString(1, address.indexId().toString());
 			insertReferenceStatement.setString(2, address.documentId().toString());
-			insertReferenceStatement.setString(3, monikerFactoy.createTypeMoniker(address, typeName).toString());
-			insertReferenceStatement.setBoolean(4, isOnDemandImport);
-			insertReferenceStatement.setNull(5, Types.VARCHAR);
+			insertReferenceStatement.setInt(3, kind.getValue());
+			insertReferenceStatement.setString(4, monikerFactoy.createTypeMoniker(address, typeName).toString());
+			insertReferenceStatement.setBoolean(5, isOnDemandImport);
 			insertReferenceStatement.setNull(6, Types.VARCHAR);
+			insertReferenceStatement.setNull(7, Types.VARCHAR);
 			if (sourceRange != null) {
-				insertReferenceStatement.setInt(7, sourceRange.start());
-				insertReferenceStatement.setInt(8, sourceRange.length());
+				insertReferenceStatement.setInt(8, sourceRange.start());
+				insertReferenceStatement.setInt(9, sourceRange.length());
 			} else {
-				insertReferenceStatement.setNull(7, Types.INTEGER);
 				insertReferenceStatement.setNull(8, Types.INTEGER);
+				insertReferenceStatement.setNull(9, Types.INTEGER);
 			}
 			insertReferenceStatement.execute();			
 		} catch (SQLException e) {
@@ -136,16 +138,17 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 			insertReferenceStatement.clearParameters();
 			insertReferenceStatement.setString(1, address.indexId().toString());
 			insertReferenceStatement.setString(2, address.documentId().toString());
-			insertReferenceStatement.setString(3, monikerFactoy.createTypeMoniker(address, typeName).toString());
-			insertReferenceStatement.setBoolean(4, isOnDemandImport);
-			insertReferenceStatement.setString(5, methodName.toString());
-			insertReferenceStatement.setString(6, signature.toString());
+			insertReferenceStatement.setInt(3, kind.getValue());
+			insertReferenceStatement.setString(4, monikerFactoy.createTypeMoniker(address, typeName).toString());
+			insertReferenceStatement.setBoolean(5, isOnDemandImport);
+			insertReferenceStatement.setString(6, methodName.toString());
+			insertReferenceStatement.setString(7, signature.toString());
 			if (sourceRange != null) {
-				insertReferenceStatement.setInt(7, sourceRange.start());
-				insertReferenceStatement.setInt(8, sourceRange.length());
+				insertReferenceStatement.setInt(8, sourceRange.start());
+				insertReferenceStatement.setInt(9, sourceRange.length());
 			} else {
-				insertReferenceStatement.setNull(7, Types.INTEGER);
 				insertReferenceStatement.setNull(8, Types.INTEGER);
+				insertReferenceStatement.setNull(9, Types.INTEGER);
 			}
 			insertReferenceStatement.execute();			
 		} catch (SQLException e) {
@@ -161,16 +164,17 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 			insertReferenceStatement.clearParameters();
 			insertReferenceStatement.setString(1, address.indexId().toString());
 			insertReferenceStatement.setString(2, address.documentId().toString());
-			insertReferenceStatement.setString(3, monikerFactoy.createTypeMoniker(address, typeName).toString());
-			insertReferenceStatement.setBoolean(4, isOnDemandImport);
-			insertReferenceStatement.setString(5, fieldName.toString());
-			insertReferenceStatement.setNull(6, Types.VARCHAR);
+			insertReferenceStatement.setInt(3, kind.getValue());
+			insertReferenceStatement.setString(4, monikerFactoy.createTypeMoniker(address, typeName).toString());
+			insertReferenceStatement.setBoolean(5, isOnDemandImport);
+			insertReferenceStatement.setString(6, fieldName.toString());
+			insertReferenceStatement.setNull(7, Types.VARCHAR);
 			if (sourceRange != null) {
-				insertReferenceStatement.setInt(7, sourceRange.start());
-				insertReferenceStatement.setInt(8, sourceRange.length());
+				insertReferenceStatement.setInt(8, sourceRange.start());
+				insertReferenceStatement.setInt(9, sourceRange.length());
 			} else {
-				insertReferenceStatement.setNull(7, Types.INTEGER);
 				insertReferenceStatement.setNull(8, Types.INTEGER);
+				insertReferenceStatement.setNull(9, Types.INTEGER);
 			}
 			insertReferenceStatement.execute();			
 		} catch (SQLException e) {

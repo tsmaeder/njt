@@ -15,6 +15,7 @@ create table refs (
 	index_id text, 
 	document_id text, 
 	type_moniker text, 
+	reference_kind smallint,
 	on_demand boolean,
 	name text, 
 	signature text, 
@@ -23,5 +24,4 @@ create table refs (
 );
 
 create index reference_name on refs(name);
-
 create index reference_index_document on refs(index_id, document_id);

@@ -61,7 +61,7 @@ public class ClassFileIndexer {
 				case ClassFileConstants.FieldRefTag: {
 					// add reference to the class/interface and field name and type
 					FieldRef ref = readFieldReferenceAt(reader, i);
-					session.addFieldReference(FieldReferenceKind.NONE,
+					session.addFieldReference(FieldReferenceKind.None,
 							sourceName(ref.containingType()),
 							false, ref.nameAndType().name(), null);
 					session.addTypeReference(TypeReferenceKind.FieldType,
