@@ -1,6 +1,6 @@
 package org.eclipse.njdt.indexer.query.expression;
 
-public class BinaryOperation<O, L, R, T> extends Expression<T> {
+public abstract class BinaryOperation<O, L, R, T> extends Expression<T> {
 	private Expression<L> left;
 	private Expression<R> right;
 	private O operator;

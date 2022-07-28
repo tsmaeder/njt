@@ -21,6 +21,9 @@ public enum TypeReferenceKind implements IntValue {
 	InstanceOf(17),
 	Unknown(18);
 	
+	public static final int MIN= 1;
+	public static final int MAX= 18;
+
 	private int value;
 	
 	private TypeReferenceKind(int value) {

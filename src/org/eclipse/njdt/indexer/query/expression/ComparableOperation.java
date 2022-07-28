@@ -11,4 +11,7 @@ public class ComparableOperation<T extends Comparable<T>> extends BinaryOperatio
 		super(Boolean.class, left, right, operator);
 	}
 
+	public <V> V accept(ExpressionVisitor<V> visitor) {
+		return visitor.visit(this);
+	}
 }

@@ -12,4 +12,7 @@ public class Parameter<T> extends Expression<T> {
 		return name;
 	}
 	
+	public <V> V accept(ExpressionVisitor<V> visitor) {
+		return visitor.visit(this);
+	}
 }

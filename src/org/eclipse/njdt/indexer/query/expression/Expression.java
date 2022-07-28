@@ -1,6 +1,6 @@
 package org.eclipse.njdt.indexer.query.expression;
 
-public class Expression<T> {
+public abstract class Expression<T> {
 	private Class<T> type;
 
 	public Expression(Class<T> type) {
@@ -10,4 +10,6 @@ public class Expression<T> {
 	public Class<T> getType() {
 		return type;
 	}
+	
+	public abstract <V> V accept(ExpressionVisitor<V> v);
 }

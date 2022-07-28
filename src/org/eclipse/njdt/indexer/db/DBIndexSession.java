@@ -1,4 +1,4 @@
-package org.eclipse.njdt.indexer.writer.db;
+package org.eclipse.njdt.indexer.db;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

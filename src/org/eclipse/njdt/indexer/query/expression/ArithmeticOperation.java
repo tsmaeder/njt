@@ -11,4 +11,8 @@ public class ArithmeticOperation extends BinaryOperation<ArithmeticOperation.Ope
 	public ArithmeticOperation(Expression<Number> left, Expression<Number> right, Operator operator) {
 		super(Number.class, left, right, operator);
 	}
+	
+	public <V> V accept(ExpressionVisitor<V> visitor) {
+		return visitor.visit(this);
+	}
 }

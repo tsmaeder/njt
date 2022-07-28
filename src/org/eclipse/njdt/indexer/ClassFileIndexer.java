@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.BiFunction;
 
+import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
+import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
 import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
@@ -19,15 +21,21 @@ import org.objectweb.asm.tree.MethodNode;
 public class ClassFileIndexer {
 	private IndexWriter indexWriter;
 	private char[] buffer=  new char[1 << 16];
+	private ClassFileSourceParser sourceParser;
 
-	public ClassFileIndexer(IndexWriter indexWriter) {
+	public ClassFileIndexer(IndexWriter indexWriter, ClassFileSourceParser sourceParser) {
 		this.indexWriter = indexWriter;
+		this.sourceParser= sourceParser;
 	}
 
-	boolean indexClassFile(DocumentAddress address, InputStream bytes) {
+	boolean indexClassFile(DocumentAddress address, InputStream bytes, ICompilationUnit source) {
 		IndexWriterDocumentSession session = indexWriter.beginIndexing(address);
 		try {
 
+			ASTNode ast= null;
+			if (source != null) {
+				ast= sourceParser.parse(source);
+			}
 			ClassReader parser = new ClassReader(bytes);
 			ClassNode clazz = new ClassNode();
 			parser.accept(clazz, ClassReader.SKIP_CODE);

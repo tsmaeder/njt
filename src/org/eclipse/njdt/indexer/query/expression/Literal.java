@@ -11,4 +11,8 @@ public class Literal<T> extends Expression<T> {
 	public T getValue() {
 		return value;
 	}
+	
+	public <V> V accept(ExpressionVisitor<V> visitor) {
+		return visitor.visit(this);
+	}
 }

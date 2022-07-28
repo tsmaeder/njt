@@ -1,11 +1,9 @@
-package org.eclipse.njdt.indexer.writer.db;
+package org.eclipse.njdt.indexer.db;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Properties;
 
 import org.eclipse.njdt.indexer.DefaultMonikerFactory;
 import org.eclipse.njdt.indexer.IndexedLocation;
@@ -18,17 +16,15 @@ public class DBIndexWriter implements IndexWriter {
 	private List<IndexedLocation> indexedLocations;
 	private PreparedStatement deleteDeclarationsStatement;
 	private PreparedStatement deleteReferencesStatement;
+	private IndexDb indexDb;
 
-	public DBIndexWriter(List<IndexedLocation> locations) {
+	public DBIndexWriter(List<IndexedLocation> locations, IndexDb db) {
 		this.indexedLocations= locations;
+		this.indexDb= db;
 	}
 	
-	public void connect(String db, String username, String password) throws SQLException {
-		String url = "jdbc:postgresql://"+db;
-		Properties props = new Properties();
-		props.setProperty("user",username);
-		props.setProperty("password", password);
-		this.connection = DriverManager.getConnection(url, props);
+	public void connect() throws SQLException {
+		this.connection = indexDb.getConnection();
 		connection.setAutoCommit(false);
 		this.deleteDeclarationsStatement= connection.prepareStatement("delete from declarations where index_id= ? and document_id=?");
 		this.deleteReferencesStatement= connection.prepareStatement("delete from refs where index_id= ? and document_id=?");

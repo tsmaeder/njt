@@ -8,4 +8,8 @@ public class StringPredicate extends BinaryOperation<StringPredicate.Operator, S
 	public StringPredicate(Expression<String> left, Expression<String> right, Operator operator) {
 		super(Boolean.class, left, right, operator);
 	}
+	
+	public <V> V accept(ExpressionVisitor<V> visitor) {
+		return visitor.visit(this);
+	}
 }
