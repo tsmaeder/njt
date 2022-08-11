@@ -3,15 +3,17 @@ package org.eclipse.njdt.indexer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
-import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
 import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
 import org.eclipse.njdt.indexer.writer.IndexWriterDocumentSession;
 import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
+import org.eclipse.njdt.indexer.writer.Range;
 import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
@@ -20,36 +22,37 @@ import org.objectweb.asm.tree.MethodNode;
 
 public class ClassFileIndexer {
 	private IndexWriter indexWriter;
-	private char[] buffer=  new char[1 << 16];
-	private ClassFileSourceParser sourceParser;
+	private char[] buffer = new char[1 << 16];
 
-	public ClassFileIndexer(IndexWriter indexWriter, ClassFileSourceParser sourceParser) {
+	public ClassFileIndexer(IndexWriter indexWriter) {
 		this.indexWriter = indexWriter;
-		this.sourceParser= sourceParser;
 	}
 
-	boolean indexClassFile(DocumentAddress address, InputStream bytes, ICompilationUnit source) {
+	boolean indexClassFile(DocumentAddress address, InputStream bytes, Supplier<CompilationUnitDeclaration> astSource) {
 		IndexWriterDocumentSession session = indexWriter.beginIndexing(address);
 		try {
 
-			ASTNode ast= null;
-			if (source != null) {
-				ast= sourceParser.parse(source);
-			}
 			ClassReader parser = new ClassReader(bytes);
 			ClassNode clazz = new ClassNode();
 			parser.accept(clazz, ClassReader.SKIP_CODE);
-			CharSequence sourceName = sourceName(clazz.name);
-			session.addTypeDeclaration(clazz.access, sourceName, null);
-			for (MethodNode method : clazz.methods) {
-				session.addMethodDeclaration(method.access, sourceName, method.name, method.desc,
-						null);
-			}
 
-			for (FieldNode field : clazz.fields) {
-				session.addFieldDeclaration(field.access, sourceName, field.name, sourceName, null);
+			if (clazz.module == null) {
+
+				ASTNode ast = astSource.get();
+
+				CharSequence sourceName = sourceName(clazz.name);
+				Range range = ClassFileSourceParser.lookupClassDeclaration((CompilationUnitDeclaration) ast, clazz.name);
+				session.addTypeDeclaration(clazz.access, sourceName, range);
+
+				for (MethodNode method : clazz.methods) {
+					session.addMethodDeclaration(method.access, sourceName, method.name, method.desc, null);
+				}
+
+				for (FieldNode field : clazz.fields) {
+					session.addFieldDeclaration(field.access, sourceName, field.name, sourceName, null);
+				}
+				indexConstantPoolReferences(session, address, parser);
 			}
-			indexConstantPoolReferences(session, address, parser);
 
 			return true;
 		} catch (IOException e) {
@@ -59,7 +62,8 @@ public class ClassFileIndexer {
 		}
 	}
 
-	private void indexConstantPoolReferences(IndexWriterDocumentSession session, DocumentAddress address, ClassReader reader) {
+	private void indexConstantPoolReferences(IndexWriterDocumentSession session, DocumentAddress address,
+			ClassReader reader) {
 		for (int i = 1; i < reader.getItemCount(); i++) {
 			int offset = reader.getItem(i);
 			if (offset > 0) {
@@ -69,9 +73,8 @@ public class ClassFileIndexer {
 				case ClassFileConstants.FieldRefTag: {
 					// add reference to the class/interface and field name and type
 					FieldRef ref = readFieldReferenceAt(reader, i);
-					session.addFieldReference(FieldReferenceKind.None,
-							sourceName(ref.containingType()),
-							false, ref.nameAndType().name(), null);
+					session.addFieldReference(FieldReferenceKind.None, sourceName(ref.containingType()), false,
+							ref.nameAndType().name(), null);
 					session.addTypeReference(TypeReferenceKind.FieldType,
 							sourceName(decodeBaseDescriptor(ref.nameAndType().type())), false, null);
 					break;
@@ -88,8 +91,7 @@ public class ClassFileIndexer {
 						}
 						// add a method reference
 						session.addMethodReference(MethodReferenceKind.QualifiedReference,
-								sourceName(ref.containingType()), false, name,
-								ref.nameAndType().type(), null);
+								sourceName(ref.containingType()), false, name, ref.nameAndType().type(), null);
 					}
 					break;
 				}
@@ -185,10 +187,10 @@ public class ClassFileIndexer {
 		case 'V':
 			return arrayTypeOf.apply("void", arrayDim);
 		default:
-			throw new RuntimeException("Unexpected type tag: "+signature.charAt(i));
+			throw new RuntimeException("Unexpected type tag: " + signature.charAt(i));
 		}
 	}
-	
+
 	private MethodRef readMethodReferenceAt(ClassReader reader, int cpIndex) {
 		int cpOffset = reader.getItem(cpIndex);
 		CharSequence clazz = readClassNameAt(reader, reader.readUnsignedShort(cpOffset));

@@ -1,9 +1,11 @@
 package org.eclipse.njdt.indexer;
 
+import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.env.AccessRestriction;
 import org.eclipse.jdt.internal.compiler.env.IBinaryType;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
@@ -11,11 +13,15 @@ import org.eclipse.jdt.internal.compiler.env.IModuleAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.ISourceType;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.impl.ITypeRequestor;
+import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
+import org.eclipse.jdt.internal.compiler.lookup.ClassScope;
+import org.eclipse.jdt.internal.compiler.lookup.CompilationUnitScope;
 import org.eclipse.jdt.internal.compiler.lookup.LookupEnvironment;
 import org.eclipse.jdt.internal.compiler.lookup.PackageBinding;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
+import org.eclipse.njdt.indexer.writer.Range;
 
 public class ClassFileSourceParser {
 	private IModuleAwareNameEnvironment nameEnvironment;
@@ -54,5 +60,44 @@ public class ClassFileSourceParser {
 		lookupEnvironment.buildTypeBindings(ast, null);
 		lookupEnvironment.completeTypeBindings();
 		return ast;
+	}
+	
+	public static Range lookupClassDeclaration(CompilationUnitDeclaration cuNode, String binaryName) {
+		ASTNode node= lookupClassDeclarationNode(cuNode, binaryName);
+		return node == null ? null : new Range(node.sourceStart, node.sourceEnd-node.sourceStart);
+	}
+	
+	private static ASTNode lookupClassDeclarationNode(CompilationUnitDeclaration root, String binaryName) {
+		if (root == null) {
+			return null;
+		}
+		class Visitor extends ASTVisitor {
+			ASTNode foundNode= null;;
+			
+			@Override
+			public boolean visit(TypeDeclaration localTypeDeclaration, BlockScope scope) {
+				return matchClassName(localTypeDeclaration);
+			}
+
+			private boolean matchClassName(TypeDeclaration localTypeDeclaration) {
+				if (localTypeDeclaration.binding != null && new String(localTypeDeclaration.binding.constantPoolName()).equals(binaryName)) {
+					foundNode= localTypeDeclaration;
+				}
+				return foundNode == null;
+			}
+			
+			@Override
+			public boolean visit(TypeDeclaration memberTypeDeclaration, ClassScope scope) {
+				return matchClassName(memberTypeDeclaration);
+			}
+			@Override
+			public boolean visit(TypeDeclaration typeDeclaration, CompilationUnitScope scope) {
+				return matchClassName(typeDeclaration);
+			}
+		}
+		
+		Visitor v= new Visitor();
+		root.traverse(v, null, false);
+		return v.foundNode;
 	}
 }

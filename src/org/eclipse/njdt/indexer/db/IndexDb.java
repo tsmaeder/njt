@@ -15,6 +15,7 @@ public class IndexDb {
 		dataSource.setUrl(url);
 		dataSource.setUser(username);
 		dataSource.setPassword(password);
+		dataSource.setDataSourceName("indexDbSource");
 	}
 	
 	public Connection getConnection() throws SQLException {

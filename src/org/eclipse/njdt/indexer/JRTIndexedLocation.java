@@ -16,7 +16,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
 
@@ -26,13 +29,20 @@ public class JRTIndexedLocation implements IndexedLocation {
 	private FileSystem fs;
 	private String indexUri;
 	Map<CharSequence, Boolean> typeCache= new HashMap<>();
+	private ClassFileSourceParser sourceParser;
+	private ZipSourceLookup sourceLookup;
+	
+	private CompilationUnitDeclaration lastAst;
+	private ICompilationUnit lastCompilationUnit;
 
-	public JRTIndexedLocation(String javaHome)
+	public JRTIndexedLocation(String javaHome, ClassFileSourceParser parser)
 			throws IOException {
 		this.javaHome = new File(javaHome);
 		this.fs = FileSystems.newFileSystem(URI.create("jrt:/"), Collections.singletonMap("java.home", javaHome));
 		String uri = this.javaHome.toURI().toString();
 		this.indexUri= uri.replaceFirst("file", SCHEME);
+		this.sourceParser= parser;
+		this.sourceLookup= new ZipSourceLookup(this.javaHome.toPath().resolve("lib/src.zip"));
 	}
 
 	@Override
@@ -75,16 +85,34 @@ public class JRTIndexedLocation implements IndexedLocation {
 	@Override
 	public void index(IndexWriter indexWriter) {
 		ClassFileIndexer classFileIndexer = new ClassFileIndexer(indexWriter);
+		sourceLookup.open();
 		try {
 			Files.walkFileTree(fs.getPath("modules"), new SimpleFileVisitor<Path>() {
 
 				@Override
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 					if (attrs.isRegularFile() && file.getFileName().toString().endsWith(".class")) {
+						String t= file.subpath(2, file.getNameCount()).toString();
+						String typeName= t.substring(0, t.length()-6);
+						String module= file.subpath(1, 2).toString();
 
 						try (InputStream stream = Files.newInputStream(file, StandardOpenOption.READ)) {
-							classFileIndexer.indexClassFile(new DocumentAddress(getIndexUri(), file.toString()),
-									stream);
+							DocumentAddress documentAddress = new DocumentAddress(getIndexUri(), file.toString());
+
+							
+							Supplier<CompilationUnitDeclaration> astSource= () -> {
+								ICompilationUnit source = sourceLookup.lookup(module, typeName);
+								
+								if (source != null) {
+									if (!source.equals(lastCompilationUnit)) {
+										lastAst= (CompilationUnitDeclaration) sourceParser.parse(source);
+									} 
+									return lastAst;
+								}
+								return null;
+							};
+							classFileIndexer.indexClassFile(documentAddress,
+									stream, astSource);
 						}
 					}
 					return FileVisitResult.CONTINUE;
@@ -92,6 +120,8 @@ public class JRTIndexedLocation implements IndexedLocation {
 			});
 		} catch (IOException e) {
 			throw new RuntimeException("Unexpected Error indexing file", e);
+		} finally {
+			sourceLookup.close();
 		}
 	}
 }
