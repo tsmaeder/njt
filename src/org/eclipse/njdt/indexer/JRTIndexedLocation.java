@@ -105,6 +105,7 @@ public class JRTIndexedLocation implements IndexedLocation {
 								
 								if (source != null) {
 									if (!source.equals(lastCompilationUnit)) {
+										lastCompilationUnit= source;
 										lastAst= (CompilationUnitDeclaration) sourceParser.parse(source);
 									} 
 									return lastAst;
