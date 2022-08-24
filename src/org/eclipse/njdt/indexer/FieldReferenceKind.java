@@ -11,28 +11,35 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
-package org.eclipse.njdt.indexer.query.expression;
+package org.eclipse.njdt.indexer;
 
-public abstract class BinaryOperation<O, L, R, T> extends Expression<T> {
-	private Expression<L> left;
-	private Expression<R> right;
-	private O operator;
+/**
+ * Enum for different kinds of references to fields.
+ * @author Thomas Mäder
+ *
+ */
+public enum FieldReferenceKind implements IntValue {
+	
+	None(20),
+	Read(21),
+	Write(22),
+	Both(23);
 
-	public BinaryOperation(Class<T> type, Expression<L> left, Expression<R> right, O operator) {
-		super(type);
-		this.left= left;
-		this.right= right;
-		this.operator= operator;
+	public static final int MIN= 20;
+	public static final int MAX= 23;
+
+	private int value;
+
+	FieldReferenceKind(int i) {
+		this.value= i;
+	}
+
+	@Override
+	public int getValue() {
+		return value;
 	}
 	
-	public Expression<L> getLeft() {
-		return left;
+	static FieldReferenceKind forValue(int value) {
+		return values()[value-None.getValue()];
 	}
-	
-	public Expression<R> getRight() {
-		return right;
-	}
-	
-	public O getOperator() {
-		return operator;
-	}}
+}

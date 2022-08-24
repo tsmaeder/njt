@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer.db;
 
 import java.sql.Connection;
@@ -5,14 +18,13 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 
+import org.eclipse.njdt.indexer.FieldReferenceKind;
+import org.eclipse.njdt.indexer.MethodReferenceKind;
 import org.eclipse.njdt.indexer.MonikerFactory;
+import org.eclipse.njdt.indexer.Range;
+import org.eclipse.njdt.indexer.TypeReferenceKind;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
-import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriterDocumentSession;
-import org.eclipse.njdt.indexer.writer.IntValue;
-import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
-import org.eclipse.njdt.indexer.writer.Range;
-import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
 
 public class DBIndexSession implements IndexWriterDocumentSession {
 	private Connection connection;
@@ -29,15 +41,15 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 		this.connection = c;
 		
 		this.insertDeclarationStatement = connection
-				.prepareStatement("insert into declarations(index_id, document_id, modifiers, type_name, name, signature, source_start, source_length) "
-						+ "values(?, ?, ?, ?, ?, ?, ?, ?)");
+				.prepareStatement("insert into declarations(index_id, document_id, modifiers, type_name, name, signature, source_start, source_length, module_name) "
+						+ "values(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		
 		this.insertReferenceStatement = connection.prepareStatement("insert into refs (index_id, document_id, reference_kind, type_moniker, on_demand, name, signature, source_start, source_end) "
 				+ "values (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 	}
 
 	@Override
-	public void addTypeDeclaration(int modifiers, CharSequence qualifiedTypeName, Range sourceRange) {
+	public void addTypeDeclaration(int modifiers, CharSequence module, CharSequence qualifiedTypeName, Range sourceRange) {
 		try {
 			insertDeclarationStatement.clearParameters();
 			insertDeclarationStatement.setString(1, address.indexId().toString());
@@ -53,6 +65,7 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 				insertDeclarationStatement.setNull(7, Types.INTEGER);
 				insertDeclarationStatement.setNull(8, Types.INTEGER);
 			}
+			insertDeclarationStatement.setString(9, module.toString());
 			insertDeclarationStatement.execute();
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -60,7 +73,7 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 	}
 
 	@Override
-	public void addMethodDeclaration(int modifiers, CharSequence qualifiedTypeName, CharSequence methodName,
+	public void addMethodDeclaration(int modifiers, CharSequence module, CharSequence qualifiedTypeName, CharSequence methodName,
 			CharSequence signature, Range sourceRange) {
 		try {
 			insertDeclarationStatement.clearParameters();
@@ -77,6 +90,7 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 				insertDeclarationStatement.setNull(7, Types.INTEGER);
 				insertDeclarationStatement.setNull(8, Types.INTEGER);
 			}
+			insertDeclarationStatement.setString(9, module.toString());
 			insertDeclarationStatement.execute();
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -84,7 +98,7 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 	}
 
 	@Override
-	public void addFieldDeclaration(int modifiers, CharSequence qualifiedTypeName, CharSequence fieldName,
+	public void addFieldDeclaration(int modifiers, CharSequence module, CharSequence qualifiedTypeName, CharSequence fieldName,
 			CharSequence fieldSignature, Range sourceRange) {
 		try {
 			insertDeclarationStatement.clearParameters();
@@ -101,6 +115,7 @@ public class DBIndexSession implements IndexWriterDocumentSession {
 				insertDeclarationStatement.setNull(7, Types.INTEGER);
 				insertDeclarationStatement.setNull(8, Types.INTEGER);
 			}
+			insertDeclarationStatement.setString(9, module.toString());
 			insertDeclarationStatement.execute();
 		} catch (SQLException e) {
 			throw new RuntimeException(e);

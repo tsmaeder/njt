@@ -11,8 +11,9 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
+/**
+ * This package defines interfaces to query the index. It's aim is to 
+ * provide a more general query facility for querying the index than what 
+ * JDT does now.
+ */
 package org.eclipse.njdt.indexer.query;
-
-public interface TypeDeclaration extends Declaration {
-
-}

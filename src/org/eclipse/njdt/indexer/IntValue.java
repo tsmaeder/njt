@@ -11,8 +11,13 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
-package org.eclipse.njdt.indexer.query;
+package org.eclipse.njdt.indexer;
 
-public interface TypeDeclaration extends Declaration {
-
+/**
+ * Just a utility interface to get a value from an enum.
+ * @author Thomas Mäder
+ *
+ */
+public interface IntValue {
+	int getValue();
 }

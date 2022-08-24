@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer.db;
 
 import java.sql.Connection;
@@ -8,6 +21,9 @@ import java.util.Map;
 
 import org.eclipse.jdt.internal.compiler.ast.FieldReference;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
+import org.eclipse.njdt.indexer.FieldReferenceKind;
+import org.eclipse.njdt.indexer.MethodReferenceKind;
+import org.eclipse.njdt.indexer.TypeReferenceKind;
 import org.eclipse.njdt.indexer.query.Declaration;
 import org.eclipse.njdt.indexer.query.MethodReference;
 import org.eclipse.njdt.indexer.query.Reference;
@@ -21,9 +37,6 @@ import org.eclipse.njdt.indexer.query.expression.Literal;
 import org.eclipse.njdt.indexer.query.expression.Parameter;
 import org.eclipse.njdt.indexer.query.expression.Property;
 import org.eclipse.njdt.indexer.query.expression.StringPredicate;
-import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
-import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
-import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
 
 class ExpressionRenderer {
 	private static final String[] SQL_ARITHEMETIC_OPS= new String[] {

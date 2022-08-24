@@ -11,8 +11,7 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
-package org.eclipse.njdt.indexer.query;
-
-public interface TypeDeclaration extends Declaration {
-
-}
+/**
+ * This package implements an index based on a SQL (postgres) db.
+ */
+package org.eclipse.njdt.indexer.db;

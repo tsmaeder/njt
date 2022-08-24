@@ -11,8 +11,14 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
-package org.eclipse.njdt.indexer.query;
+package org.eclipse.njdt.indexer;
 
-public interface TypeDeclaration extends Declaration {
-
-}
+/**
+ * Range in source code. 0-based, designating the index of the first character in range.
+ * @author Thomas Mäder
+ *
+ */
+public record Range (
+	int start, 
+	int length
+) {};

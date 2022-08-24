@@ -2,6 +2,7 @@ create table declarations (
 	index_id text,
 	document_id text,
 	modifiers integer,
+	module_name text,
 	type_name text,
 	source_start integer,
 	source_length integer,

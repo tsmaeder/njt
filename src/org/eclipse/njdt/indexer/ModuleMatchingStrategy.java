@@ -13,12 +13,25 @@
  *******************************************************************************/
 package org.eclipse.njdt.indexer;
 
+import org.eclipse.jdt.internal.compiler.lookup.ModuleBinding;
+
 /**
- * Just a utility
+ * Determine rules for looking up types in modules based on compiler constants for module names
  * @author Thomas Mäder
  *
- * @param <S>
- * @param <T>
  */
-public record Pair<S, T>(S left, S right) {
+public enum ModuleMatchingStrategy {
+	Named, Unnamed, AnyNamed, Any;
+	
+	public static ModuleMatchingStrategy fromModuleName(char[] name) {
+		if (name == ModuleBinding.ANY) {
+			return Any;
+		} else if (name == ModuleBinding.UNNAMED) {
+			return Unnamed;
+		} else if (name == ModuleBinding.ANY_NAMED) {
+			return AnyNamed;
+		} else {
+			return Named;
+		}
+	}
 }

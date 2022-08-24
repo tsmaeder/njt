@@ -11,8 +11,10 @@
  * Contributors:
  *     Red Hat - initial API and implementation
  *******************************************************************************/
-package org.eclipse.njdt.indexer.query;
-
-public interface TypeDeclaration extends Declaration {
-
-}
+/**
+ * This package defines a simple expression language for expressing 
+ * conditions on various entities in the index. A concrete index implementation
+ * must transform these expressions to be used locally, for example by building
+ * a sql statement from the expressions
+ */
+package org.eclipse.njdt.indexer.query.expression;

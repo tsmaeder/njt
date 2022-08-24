@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer;
 
 import java.io.IOException;
@@ -7,6 +20,15 @@ import java.util.zip.ZipFile;
 
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 
+
+/**
+ * Source lookup based on a zip file. The structure of a zip entry is assumed to be 
+ * <module_name>/path/to/package/MainTypeName.java".
+ * This lookup strategy is probably not correct for inner types of non-public types. Feel free to fix.
+ * 
+ * @author Thomas Mäder
+ *
+ */
 public class ZipSourceLookup implements SourceLookup {
 	
 	private Path path;

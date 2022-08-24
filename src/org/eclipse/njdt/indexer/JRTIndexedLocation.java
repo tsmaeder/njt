@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer;
 
 import java.io.File;
@@ -23,6 +36,11 @@ import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
 
+/**
+ * An indexed location for building the index over a JDK location 
+ * @author Thomas Mäder
+ *
+ */
 public class JRTIndexedLocation implements IndexedLocation {
 	public static final String SCHEME = "jrt+file";
 	private File javaHome;
@@ -113,7 +131,7 @@ public class JRTIndexedLocation implements IndexedLocation {
 								return null;
 							};
 							classFileIndexer.indexClassFile(documentAddress,
-									stream, astSource);
+									stream, module, astSource);
 						}
 					}
 					return FileVisitResult.CONTINUE;

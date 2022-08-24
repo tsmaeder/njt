@@ -1,19 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer.db;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.njdt.indexer.Range;
 import org.eclipse.njdt.indexer.query.IndexReader;
 import org.eclipse.njdt.indexer.query.Reference;
 import org.eclipse.njdt.indexer.query.TypeDeclaration;
 import org.eclipse.njdt.indexer.query.expression.Expression;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
-import org.eclipse.njdt.indexer.writer.Range;
 
 public class DBIndexReader implements IndexReader {
 	private IndexDb db;
@@ -37,7 +49,6 @@ public class DBIndexReader implements IndexReader {
 			List<T> result= new ArrayList<>();
 			PreparedStatement statement= new DBQuery(what, where).createStatement(connection);
 			ResultSet cursor = statement.executeQuery();
-			ResultSetMetaData metaData = cursor.getMetaData();
 			while (cursor.next()) {
 				createDeclaration(what, cursor);
 			}

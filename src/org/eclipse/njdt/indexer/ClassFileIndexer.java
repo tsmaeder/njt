@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Red Hat and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Red Hat - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.njdt.indexer;
 
 import java.io.IOException;
@@ -9,12 +22,8 @@ import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.njdt.indexer.writer.DocumentAddress;
-import org.eclipse.njdt.indexer.writer.FieldReferenceKind;
 import org.eclipse.njdt.indexer.writer.IndexWriter;
 import org.eclipse.njdt.indexer.writer.IndexWriterDocumentSession;
-import org.eclipse.njdt.indexer.writer.MethodReferenceKind;
-import org.eclipse.njdt.indexer.writer.Range;
-import org.eclipse.njdt.indexer.writer.TypeReferenceKind;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -28,7 +37,7 @@ public class ClassFileIndexer {
 		this.indexWriter = indexWriter;
 	}
 
-	boolean indexClassFile(DocumentAddress address, InputStream bytes, Supplier<CompilationUnitDeclaration> astSource) {
+	boolean indexClassFile(DocumentAddress address, InputStream bytes, String module, Supplier<CompilationUnitDeclaration> astSource) {
 		IndexWriterDocumentSession session = indexWriter.beginIndexing(address);
 		try {
 
@@ -40,18 +49,23 @@ public class ClassFileIndexer {
 
 				ASTNode ast = astSource.get();
 
-				CharSequence sourceName = sourceName(clazz.name);
+				// this is an example of how to compute source ranges from attached source
+				// it can be extended to other types for declarations/references (fields, methods, etc.)
 				Range range = ClassFileSourceParser.lookupClassDeclaration((CompilationUnitDeclaration) ast, clazz.name);
-				session.addTypeDeclaration(clazz.access, sourceName, range);
+				session.addTypeDeclaration(clazz.access, module, clazz.name, range);
+				
+				// this would be the place to index references to supertypes, etc.
 
 				for (MethodNode method : clazz.methods) {
-					session.addMethodDeclaration(method.access, sourceName, method.name, method.desc, null);
+					session.addMethodDeclaration(method.access, module, clazz.name, method.name, method.desc, null);
 				}
 
 				for (FieldNode field : clazz.fields) {
-					session.addFieldDeclaration(field.access, sourceName, field.name, sourceName, null);
+					session.addFieldDeclaration(field.access, module, clazz.name, field.name, clazz.name, null);
 				}
 				indexConstantPoolReferences(session, address, parser);
+			} else {
+				// index a module
 			}
 
 			return true;
@@ -73,10 +87,10 @@ public class ClassFileIndexer {
 				case ClassFileConstants.FieldRefTag: {
 					// add reference to the class/interface and field name and type
 					FieldRef ref = readFieldReferenceAt(reader, i);
-					session.addFieldReference(FieldReferenceKind.None, sourceName(ref.containingType()), false,
+					session.addFieldReference(FieldReferenceKind.None, ref.containingType(), false,
 							ref.nameAndType().name(), null);
 					session.addTypeReference(TypeReferenceKind.FieldType,
-							sourceName(decodeBaseDescriptor(ref.nameAndType().type())), false, null);
+							decodeBaseDescriptor(ref.nameAndType().type()), false, null);
 					break;
 				}
 				case ClassFileConstants.MethodRefTag:
@@ -87,17 +101,17 @@ public class ClassFileIndexer {
 					if (ref.containingType().charAt(0) != '[') {
 						CharSequence name = ref.nameAndType().name();
 						if ("<init>".equals(name)) {
-							name = typeName(sourceName(ref.containingType()));
+							name = typeName(ref.containingType());
 						}
 						// add a method reference
 						session.addMethodReference(MethodReferenceKind.QualifiedReference,
-								sourceName(ref.containingType()), false, name, ref.nameAndType().type(), null);
+								ref.containingType(), false, name, ref.nameAndType().type(), null);
 					}
 					break;
 				}
 				case ClassFileConstants.ClassTag: {
 					// add a type reference
-					CharSequence name = sourceName(readClassNameAt(reader, i));
+					CharSequence name = readClassNameAt(reader, i);
 					if (name.length() > 0 && name.charAt(0) == '[')
 						break; // skip over array references
 					session.addTypeReference(TypeReferenceKind.Unknown, name, false, null);
@@ -196,10 +210,6 @@ public class ClassFileIndexer {
 		CharSequence clazz = readClassNameAt(reader, reader.readUnsignedShort(cpOffset));
 		NameAndType nameAndType = readNameAndTypeAt(reader, reader.readUnsignedShort(cpOffset + 2));
 		return new MethodRef(clazz, nameAndType);
-	}
-
-	private CharSequence sourceName(CharSequence clazz) {
-		return clazz.toString().replace('$', '.');
 	}
 }
 
